@@ -1,2 +1,2 @@
 # orc-project-323.6
- JHU database + joinpoint regression
+Joinpoint regression to find upper limit cases for 31 countries
