@@ -1,0 +1,556 @@
+# Initiation
+packages_to_install <- c("readxl", "tidyverse", "dplyr", "caret", "leaps", 
+                         "MASS", "mice", "lattice", "VIM", "survival", 
+                         "leaps", "robustbase", "inline", "Formula", 
+                         "rrcov", "Hmisc", "dplyr", "BMA", "rms", "sjPlot", 
+                         "sjmisc", "sjlabelled", "pROC", "car", "carData", 
+                         "compareGroups", "readxl", "chngpt")
+                         
+
+install.packages(packages_to_install, dependencies = TRUE)
+sapply(packages_to_install, require, character.only = TRUE)
+
+
+setwd('G:/My Drive/01 Scientific Projects/ORC 323.6 Upper limit for COVID cases')
+
+
+# Load dataset and create data frames
+dat <- read_excel('data_version5.xlsx')
+attach(dat)
+names(dat)
+
+
+
+
+x = data.frame(reproduction_rate,stringency_index,population_density,median_age,aged_70_older,gdp_per_capita,cardiovasc_death_rate,diabetes_prevalence,female_smokers,male_smokers,life_expectancy,human_development_index,NumberHospital,NumberBed,NumberBedICU,Hospitalper1000000,NormalBedper1000000,ICUBedper1000000,Ventilatorper1000000,PerICUNormalBed,PerICUBedHospital,PerNumberBedHospital,PerVentilatorsHospital,HospitalperGDP,NormalBedperGDP,ICUBedperGDP,VentilatorperGDP)
+
+y = Upper_limit_per1000000
+
+
+# Run bicreg
+bma.search <- bicreg(x, y, strict = F, OR = 20)
+
+summary(bma.search)
+
+
+# Multilinear reg models
+fit1 = lm(y ~ reproduction_rate + population_density + median_age  + aged_70_older + gdp_per_capita + cardiovasc_death_rate + diabetes_prevalence + female_smokers + male_smokers + life_expectancy + human_development_index + NumberHospital + NumberBedICU + Hospitalper1000000 + NormalBedper1000000 + ICUBedper1000000 + Ventilatorper1000000 + PerICUNormalBed + PerICUBedHospital + PerNumberBedHospital + PerVentilatorsHospital + HospitalperGDP + NormalBedperGDP + ICUBedperGDP + VentilatorperGDP, data=dat) 
+summary(fit1)
+confint(fit1)
+
+# Create a table of results
+library(sjPlot)
+library(sjmisc)
+library(sjlabelled)
+tab_model(fit1, p.val = "kr", show.zeroinf = T)
+
+dat$predicted <- predict(fit1)
+dat$residuals <- residuals(fit1)
+
+
+ggplot(dat, aes(x =  reproduction_rate + population_density + median_age  + aged_70_older + gdp_per_capita + cardiovasc_death_rate + diabetes_prevalence + female_smokers + male_smokers + life_expectancy + human_development_index + NumberHospital + NumberBedICU + Hospitalper1000000 + NormalBedper1000000 + ICUBedper1000000 + Ventilatorper1000000 + PerICUNormalBed + PerICUBedHospital + PerNumberBedHospital + PerVentilatorsHospital + HospitalperGDP + NormalBedperGDP + ICUBedperGDP + VentilatorperGDP, y = y,  label = rownames(dat))) +
+  geom_smooth(method = "lm", se = FALSE, color = "lightgrey") +     # regression line  
+  
+  geom_segment(aes(xend =  reproduction_rate + population_density + median_age  + aged_70_older + gdp_per_capita + cardiovasc_death_rate + diabetes_prevalence + female_smokers + male_smokers + life_expectancy + human_development_index + NumberHospital + NumberBedICU + Hospitalper1000000 + NormalBedper1000000 + ICUBedper1000000 + Ventilatorper1000000 + PerICUNormalBed + PerICUBedHospital + PerNumberBedHospital + PerVentilatorsHospital + HospitalperGDP + NormalBedperGDP + ICUBedperGDP + VentilatorperGDP, yend = predicted), alpha = .2) + # draw line from point to line
+  
+  geom_point(aes(color = abs(residuals), size = abs(residuals))) +  # size of the points
+  scale_color_continuous(low = "green", high = "red") +             # colour of the points mapped to residual size - green smaller, red larger
+  guides(scale = "none") +                             # Size legend removed
+  geom_point(aes(y = predicted), shape = 1) +
+  theme_bw(base_size = 32) + geom_text()
+
+
+
+summary(fit1)
+
+data$fit <- lm(y ~ reproduction_rate + population_density + median_age  + aged_70_older + gdp_per_capita + cardiovasc_death_rate + diabetes_prevalence + female_smokers + male_smokers + life_expectancy + human_development_index + NumberHospital + NumberBedICU + Hospitalper1000000 + NormalBedper1000000 + ICUBedper1000000 + Ventilatorper1000000 + PerICUNormalBed + PerICUBedHospital + PerNumberBedHospital + PerVentilatorsHospital + HospitalperGDP + NormalBedperGDP + ICUBedperGDP + VentilatorperGDP, data=dat) 
+
+dat.mod <- lm(y ~ reproduction_rate + population_density + median_age  + aged_70_older + gdp_per_capita + cardiovasc_death_rate + diabetes_prevalence + female_smokers + male_smokers + life_expectancy + human_development_index + NumberHospital + NumberBedICU + Hospitalper1000000 + NormalBedper1000000 + ICUBedper1000000 + Ventilatorper1000000 + PerICUNormalBed + PerICUBedHospital + PerNumberBedHospital + PerVentilatorsHospital + HospitalperGDP + NormalBedperGDP + ICUBedperGDP + VentilatorperGDP, data=dat) 
+residualPlot(dat.mod)
+outlierTest(dat.mod)
+influenceIndexPlot(dat.mod)
+infIndexPlot(dat.mod)
+influenceIndexPlot(dat.mod)
+influencePlot(dat.mod)
+influencePlot(dat.mod, col = "red", cex.lab =2, cex.axis = 2, cex.sub = 2)
+
+
+
+library(broom)
+library(jtools)
+library(sjPlot)
+library(sjmisc)
+library(sjlabelled)
+m1 = lm(y ~ PerICUBedHospital + PerNumberBedHospital + PerVentilatorsHospital + continent + level, data=dat) 
+m2 = lm(y ~ PerICUBedHospital, data=dat) 
+m3 = lm(y ~ PerNumberBedHospital, data=dat) 
+m4 = lm(y ~ PerVentilatorsHospital, data=dat) 
+m5 = lm(y ~ continent, data=dat) 
+m6 = lm(y ~ level, data=dat) 
+
+
+
+
+
+library(sjPlot)
+library(sjmisc)
+library(sjlabelled)
+tab_model(m1, m2, m3, m4, m5, m6, 
+  p.val = "kr", 
+  show.zeroinf = T)
+
+
+
+fit1 = lm(y ~ PopulationMillion  + NormalBedperGDP + ICUBedperGDP + VentilatorperGDP +  continent + level, data=dat) 
+summary(fit1)
+confint(fit1)
+
+dat$predicted <- predict(fit1)
+dat$residuals <- residuals(fit1)
+
+
+ggplot(dat, aes(x =  PerICUBedHospital + PerNumberBedHospital + PerVentilatorsHospital + continent + level, y = y)) +
+  geom_smooth(method = "lm", se = FALSE, color = "lightgrey") +     # regression line  
+  geom_segment(aes(xend = PerICUBedHospital + PerNumberBedHospital + PerVentilatorsHospital + continent + level, yend = predicted), alpha = .2) +      # draw line from point to line
+  geom_point(aes(color = abs(residuals), size = abs(residuals))) +  # size of the points
+  scale_color_continuous(low = "green", high = "red") +             # colour of the points mapped to residual size - green smaller, red larger
+  guides(color = FALSE, size = FALSE) +                             # Size legend removed
+  geom_point(aes(y = predicted), shape = 1) +
+  theme_bw(base_size = 32) + geom_text()
+
+
+
+dat1 <- read_excel('Data_365_vesion8.xlsx')
+dat <- na.omit(dat1)
+attach(dat)
+names(dat)
+
+
+
+dat$Country1 <- recode_factor(dat$Country, `Argentina` = "America", `Austria` = "Europe", `Belgium` = "Europe", `Brazil` = "America", `Canada` = "America", `Colombia` = "America", `Czechia` = "Europe", `Denmark` = "Europe", `Dominican Republic` = "America", `Finland` = "Europe", `France` = "Europe", `Germany` = "Europe", `Hungary` = "Europe", `India` = "Asia", `Ireland` = "Europe", `Italy` = "Europe", `Japan` = "Asia", `Mexico` = "America", `Netherlands` = "Europe", `Pakistan` = "Asia", `Peru` = "America", `Philippines` = "Asia", `Poland` = "Europe", `Portugal` = "Europe", `Romania` = "Europe", `South Korea` = "Asia", `Spain` = "Europe", `Sweden` = "Europe", `Switzerland` = "Europe", `Turkey` = "Europe", `United Kingdom` = "Europe", `US` = "America")
+
+
+p0 <- ggplot(data=dat, aes(x=id, y=CFR, group=Country, fill = Country, color = Country1)) +
+    geom_line(size = 1) +
+    geom_point(size = 2) + 
+    xlab("Day of increase from 10 confirmed cases") + 
+    ylab("Total active cases") + 
+    scale_x_continuous(breaks=-145:390*50) + geom_vline(xintercept=0, linetype = 'dashed', color = 'red', size = 3) +
+    theme_bw(base_size = 58)
+p0
+
+
+
+
+
+
+
+#
+
+dat <- read_excel('Reanalysis_data_365_check_again_version2_peak2RG.xlsx')
+attach(dat)
+names(dat)
+
+
+library(xlsx)
+library(readxl)
+library(ggplot2)
+library(tidyverse)
+library("TTR")
+library(readxl)
+library(tseries)
+
+df <- read_excel("owid-covid-data.xlsx")
+attach(test)
+df1 <- df %>% filter(location == 'Argentina')
+df2 <- df %>% filter(location == 'Austria')
+df3 <- df %>% filter(location == 'Belgium')
+df4 <- df %>% filter(location == 'Brazil')
+df5 <- df %>% filter(location == 'Canada')
+df6 <- df %>% filter(location == 'Colombia')
+df7 <- df %>% filter(location == 'Czechia')
+df8 <- df %>% filter(location == 'Dominican Republic')
+df9 <- df %>% filter(location == 'Finland')
+df10 <- df %>% filter(location == 'France')
+df11 <- df %>% filter(location == 'Germany')
+df12 <- df %>% filter(location == 'Hungary')
+df13 <- df %>% filter(location == 'India')
+df14 <- df %>% filter(location == 'Ireland')
+df15 <- df %>% filter(location == 'Italy')
+df16 <- df %>% filter(location == 'Japan')
+df17 <- df %>% filter(location == 'Mexico')
+df18 <- df %>% filter(location == 'Netherlands')
+df19 <- df %>% filter(location == 'Pakistan')
+df20 <- df %>% filter(location == 'Peru')
+df21 <- df %>% filter(location == 'Philippines')
+df22 <- df %>% filter(location == 'Poland')
+df23 <- df %>% filter(location == 'Portugal')
+df24 <- df %>% filter(location == 'Romania')
+df25 <- df %>% filter(location == 'South Korea')
+df26 <- df %>% filter(location == 'Spain')
+df27 <- df %>% filter(location == 'Sweden')
+df28 <- df %>% filter(location == 'Switzerland')
+df29 <- df %>% filter(location == 'Turkey')
+df30 <- df %>% filter(location == 'United Kingdom')
+df31 <- df %>% filter(location == 'United States')
+df32 <- df %>% filter(location == 'Denmark')
+
+
+check <- read_excel("All_data_Average_version2.xlsx")
+
+dff1 <- left_join(check, df1, by = "date")
+dff2 <- left_join(check, df2, by = "date")
+dff3 <- left_join(check, df3, by = "date")
+dff4 <- left_join(check, df4, by = "date")
+dff5 <- left_join(check, df5, by = "date")
+dff6 <- left_join(check, df6, by = "date")
+dff7 <- left_join(check, df7, by = "date")
+dff8 <- left_join(check, df8, by = "date")
+dff9 <- left_join(check, df9, by = "date")
+dff10 <- left_join(check, df10, by = "date")
+dff11 <- left_join(check, df11, by = "date")
+dff12 <- left_join(check, df12, by = "date")
+dff13 <- left_join(check, df13, by = "date")
+dff14 <- left_join(check, df14, by = "date")
+dff15 <- left_join(check, df15, by = "date")
+dff16 <- left_join(check, df16, by = "date")
+dff17 <- left_join(check, df17, by = "date")
+dff18 <- left_join(check, df18, by = "date")
+dff19 <- left_join(check, df19, by = "date")
+dff20 <- left_join(check, df20, by = "date")
+dff21 <- left_join(check, df21, by = "date")
+dff22 <- left_join(check, df22, by = "date")
+dff23 <- left_join(check, df23, by = "date")
+dff24 <- left_join(check, df24, by = "date")
+dff25 <- left_join(check, df25, by = "date")
+dff26 <- left_join(check, df26, by = "date")
+dff27 <- left_join(check, df27, by = "date")
+dff28 <- left_join(check, df28, by = "date")
+dff29 <- left_join(check, df29, by = "date")
+dff30 <- left_join(check, df30, by = "date")
+dff31 <- left_join(check, df31, by = "date")
+dff32 <- left_join(check, df32, by = "date")
+
+
+
+
+
+write.xlsx(dff1, "country1.xlsx")
+write.xlsx(dff2, "country2.xlsx")
+write.xlsx(dff3, "country3.xlsx")
+write.xlsx(dff4, "country4.xlsx")
+write.xlsx(dff5, "country5.xlsx")
+write.xlsx(dff6, "country6.xlsx")
+write.xlsx(dff7, "country7.xlsx")
+write.xlsx(dff8, "country8.xlsx")
+write.xlsx(dff9, "country9.xlsx")
+write.xlsx(dff10, "country10.xlsx")
+write.xlsx(dff11, "country11.xlsx")
+write.xlsx(dff12, "country12.xlsx")
+write.xlsx(dff13, "country13.xlsx")
+write.xlsx(dff14, "country14.xlsx")
+write.xlsx(dff15, "country15.xlsx")
+write.xlsx(dff16, "country16.xlsx")
+write.xlsx(dff17, "country17.xlsx")
+write.xlsx(dff18, "country18.xlsx")
+write.xlsx(dff19, "country19.xlsx")
+write.xlsx(dff20, "country20.xlsx")
+write.xlsx(dff21, "country21.xlsx")
+write.xlsx(dff22, "country22.xlsx")
+write.xlsx(dff23, "country23.xlsx")
+write.xlsx(dff24, "country24.xlsx")
+write.xlsx(dff25, "country25.xlsx")
+write.xlsx(dff26, "country26.xlsx")
+write.xlsx(dff27, "country27.xlsx")
+write.xlsx(dff28, "country28.xlsx")
+write.xlsx(dff29, "country29.xlsx")
+write.xlsx(dff30, "country30.xlsx")
+write.xlsx(dff31, "country31.xlsx")
+write.xlsx(dff32, "country32.xlsx")
+
+
+
+,
+,
+Test1 <- chngpt.test(formula.null= Argentina_case_fatality_rate  ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+Test2 <- chngpt.test(formula.null= Austria_case_fatality_rate ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test3 <- chngpt.test(formula.null= Belgium_case_fatality_rate  ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test4 <- chngpt.test(formula.null= Brazil_case_fatality_rate ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test5 <- chngpt.test(formula.null= Canada_case_fatality_rate ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test6 <- chngpt.test(formula.null= Colombia_case_fatality_rate ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test7 <- chngpt.test(formula.null= Czechia_case_fatality_rate ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test8 <- chngpt.test(formula.null= Denmark_case_fatality_rate ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test9 <- chngpt.test(formula.null= DominicanRepublic_case_fatality_rate ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test10 <- chngpt.test(formula.null= Finland_case_fatality_rate ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test11 <- chngpt.test(formula.null= France_case_fatality_rate ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test12 <- chngpt.test(formula.null= Germany_case_fatality_rate ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test13 <- chngpt.test(formula.null= Hungary_case_fatality_rate ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test14 <- chngpt.test(formula.null= India_case_fatality_rate ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test15 <- chngpt.test(formula.null= Ireland_case_fatality_rate ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test16 <- chngpt.test(formula.null= Italy_case_fatality_rate  ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test17 <- chngpt.test(formula.null= Japan_case_fatality_rate ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test18 <- chngpt.test(formula.null= SouthKorea_case_fatality_rate  ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test19 <- chngpt.test(formula.null= Mexico_case_fatality_rate ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test20 <- chngpt.test(formula.null= Netherlands_case_fatality_rate ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test21 <- chngpt.test(formula.null= Pakistan_case_fatality_rate ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test22 <- chngpt.test(formula.null= Peru_case_fatality_rate ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test23 <- chngpt.test(formula.null= Philippines_case_fatality_rate ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test24 <- chngpt.test(formula.null= Poland_case_fatality_rate ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test25 <- chngpt.test(formula.null= Portugal_case_fatality_rate ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test26 <- chngpt.test(formula.null= Romania_case_fatality_rate ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test27 <- chngpt.test(formula.null= Spain_case_fatality_rate ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test28 <- chngpt.test(formula.null= Sweden_case_fatality_rate ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test29 <- chngpt.test(formula.null= Switzerland_case_fatality_rate~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test30 <- chngpt.test(formula.null= Turkey_case_fatality_rate ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test31 <- chngpt.test(formula.null= US_case_fatality_rate ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+ Test32 <- chngpt.test(formula.null= UnitedKingdom_case_fatality_rate ~ 1, formula.chngpt=~id, dat,type="segmented", family="gaussian")
+
+
+print(Test1)
+print(Test2)
+print(Test3)
+print(Test4)
+print(Test5)
+print(Test6)
+print(Test7)
+print(Test8)
+print(Test9)
+print(Test10)
+print(Test11)
+print(Test12)
+print(Test13)
+print(Test14)
+print(Test15)
+print(Test16)
+print(Test17)
+print(Test18)
+print(Test19)
+print(Test20)
+print(Test21)
+print(Test22)
+print(Test23)
+print(Test24)
+print(Test25)
+print(Test26)
+print(Test27)
+print(Test28)
+print(Test29)
+print(Test30)
+print(Test31)
+print(Test32)
+
+
+Test1 <- chngptm(formula.1= Argentina_case_fatality_rate  ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+Test2 <- chngptm(formula.1= Austria_case_fatality_rate ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test3 <- chngptm(formula.1= Belgium_case_fatality_rate  ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test4 <- chngptm(formula.1= Brazil_case_fatality_rate ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test5 <- chngptm(formula.1= Canada_case_fatality_rate ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test6 <- chngptm(formula.1= Colombia_case_fatality_rate ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test7 <- chngptm(formula.1= Czechia_case_fatality_rate ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test8 <- chngptm(formula.1= Denmark_case_fatality_rate ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test9 <- chngptm(formula.1= DominicanRepublic_case_fatality_rate ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test10 <- chngptm(formula.1= Finland_case_fatality_rate ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test11 <- chngptm(formula.1= France_case_fatality_rate ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test12 <- chngptm(formula.1= Germany_case_fatality_rate ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test13 <- chngptm(formula.1= Hungary_case_fatality_rate ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test14 <- chngptm(formula.1= India_case_fatality_rate ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test15 <- chngptm(formula.1= Ireland_case_fatality_rate ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test16 <- chngptm(formula.1= Italy_case_fatality_rate  ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test17 <- chngptm(formula.1= Japan_case_fatality_rate ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test18 <- chngptm(formula.1= SouthKorea_case_fatality_rate  ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test19 <- chngptm(formula.1= Mexico_case_fatality_rate ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test20 <- chngptm(formula.1= Netherlands_case_fatality_rate ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test21 <- chngptm(formula.1= Pakistan_case_fatality_rate ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test22 <- chngptm(formula.1= Peru_case_fatality_rate ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test23 <- chngptm(formula.1= Philippines_case_fatality_rate ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test24 <- chngptm(formula.1= Poland_case_fatality_rate ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test25 <- chngptm(formula.1= Portugal_case_fatality_rate ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test26 <- chngptm(formula.1= Romania_case_fatality_rate ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test27 <- chngptm(formula.1= Spain_case_fatality_rate ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test28 <- chngptm(formula.1= Sweden_case_fatality_rate ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test29 <- chngptm(formula.1= Switzerland_case_fatality_rate~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test30 <- chngptm(formula.1= Turkey_case_fatality_rate ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test31 <- chngptm(formula.1= US_case_fatality_rate ~ 1, formula.2=~id, ,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+ Test32 <- chngptm(formula.1= UnitedKingdom_case_fatality_rate ~ 1, formula.2=~id,family='gaussian', data=dat,type='segmented', var.type='bootstrap', weights=NULL)
+
+
+plot(Test1)
+plot(Test2)
+plot(Test3)
+plot(Test4)
+plot(Test5)
+plot(Test6)
+plot(Test7)
+plot(Test8)
+plot(Test9)
+plot(Test10)
+plot(Test11)
+plot(Test12)
+plot(Test13)
+plot(Test14)
+plot(Test15)
+plot(Test16)
+plot(Test17)
+plot(Test18)
+plot(Test19)
+plot(Test20)
+plot(Test21)
+plot(Test22)
+plot(Test23)
+plot(Test24)
+plot(Test25)
+plot(Test26)
+plot(Test27)
+plot(Test28)
+plot(Test29)
+plot(Test30)
+plot(Test31)
+plot(Test32)
+
+
+
+
+
+
+
+
+############################################# MAIN ANALYSIS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+dat <- read_excel('Main_data_3236_version1.xlsx')
+attach(dat)
+names(dat)
+
+
+
+
+#x1 = data.frame(Density,Population,HospitalperGDP,NormalBedperGDP,ICUBedperGDP,VentilatorperGDP,PerICUNormalBed,PerICUBedHospital,PerNumberBedHospital)
+x = data.frame(Density,Population,GDP,NumberHospital,PerICUBedHospital,PerNumberBedHospital,PerVentilatorsHospital,continent,level)
+
+#y = Active_case
+
+
+x1 = data.frame(Density,Population,HospitalperGDP,NormalBedperGDP,ICUBedperGDP,VentilatorperGDP,PerICUNormalBed,PerICUBedHospital,PerNumberBedHospital)
+x = data.frame(Density,NumberHospital,NumberBed,NumberBedICU,NumberVentilation,continent,HospitalperGDP,NormalBedperGDP)
+
+y = Active_case
+
+bma.search <- bicreg(x, y, strict = F, OR = 20)
+
+summary(bma.search)
+
+
+
+
+
+library(caret)
+library(leaps)
+library(dplyr)
+library(MASS)
+
+# Fit the model
+model <- lm(y ~., data = x) %>%
+  stepAIC(trace = FALSE)
+# Summarize the final selected model
+summary(model)
+
+
+
+fit1 = lm(y ~ PerICUBedHospital + PerNumberBedHospital + PerVentilatorsHospital + continent + level, data=dat) 
+summary(fit1)
+confint(fit1)
+
+dat$predicted <- predict(fit1)
+dat$residuals <- residuals(fit1)
+
+library(ggplot2)
+ggplot(dat, aes(x =  PerICUBedHospital + PerNumberBedHospital + PerVentilatorsHospital + continent1 + level1, y = y,  label = rownames(dat))) +
+  geom_smooth(method = "lm", se = FALSE, color = "lightgrey") +     # regression line  
+  geom_segment(aes(xend =  PerICUBedHospital + PerNumberBedHospital + PerVentilatorsHospital + continent1 + level1, yend = predicted), alpha = .2) + # draw line from point to line
+  geom_point(aes(color = abs(residuals), size = abs(residuals))) +  # size of the points
+  scale_color_continuous(low = "green", high = "red") +             # colour of the points mapped to residual size - green smaller, red larger
+  guides(scale = "none") +                             # Size legend removed
+  geom_point(aes(y = predicted), shape = 1) +
+  theme_bw(base_size = 32) + geom_text()
+
+
+
+summary(fit1)
+PopulationMillion <- Population/1000000
+
+data$fit <- lm(y ~ PopulationMillion  + HospitalperGDP + NormalBedperGDP + VentilatorperGDP, data=dat) 
+
+dat.mod <- lm(y ~ PopulationMillion  + HospitalperGDP + NormalBedperGDP + VentilatorperGDP, data=dat) 
+residualPlot(dat.mod)
+outlierTest(dat.mod)
+influenceIndexPlot(dat.mod)
+infIndexPlot(dat.mod)
+influenceIndexPlot(dat.mod)
+influencePlot(dat.mod)
+influencePlot(dat.mod, col = "red", cex.lab =2, cex.axis = 2, cex.sub = 2)
+
+
+
+library(broom)
+library(jtools)
+library(sjPlot)
+library(sjmisc)
+library(sjlabelled)
+m1 = lm(y ~ PerICUBedHospital + PerNumberBedHospital + PerVentilatorsHospital + continent + level, data=dat) 
+m2 = lm(y ~ PerICUBedHospital, data=dat) 
+m3 = lm(y ~ PerNumberBedHospital, data=dat) 
+m4 = lm(y ~ PerVentilatorsHospital, data=dat) 
+m5 = lm(y ~ continent, data=dat) 
+m6 = lm(y ~ level, data=dat) 
+
+
+
+
+
+library(sjPlot)
+library(sjmisc)
+library(sjlabelled)
+tab_model(m1, m2, m3, m4, m5, m6, 
+  p.val = "kr", 
+  show.zeroinf = T)
+
+
+
+fit1 = lm(y ~ PopulationMillion  + NormalBedperGDP + ICUBedperGDP + VentilatorperGDP +  continent + level, data=dat) 
+summary(fit1)
+confint(fit1)
+
+dat$predicted <- predict(fit1)
+dat$residuals <- residuals(fit1)
+
+
+ggplot(dat, aes(x =  PerICUBedHospital + PerNumberBedHospital + PerVentilatorsHospital + continent + level, y = y)) +
+  geom_smooth(method = "lm", se = FALSE, color = "lightgrey") +     # regression line  
+  geom_segment(aes(xend = PerICUBedHospital + PerNumberBedHospital + PerVentilatorsHospital + continent + level, yend = predicted), alpha = .2) +      # draw line from point to line
+  geom_point(aes(color = abs(residuals), size = abs(residuals))) +  # size of the points
+  scale_color_continuous(low = "green", high = "red") +             # colour of the points mapped to residual size - green smaller, red larger
+  guides(color = FALSE, size = FALSE) +                             # Size legend removed
+  geom_point(aes(y = predicted), shape = 1) +
+  theme_bw(base_size = 32) + geom_text()
+
+
+
+dat1 <- read_excel('Data_365_vesion8.xlsx')
+dat <- na.omit(dat1)
+attach(dat)
+names(dat)
+
+
+
+dat$Country1 <- recode_factor(dat$Country, `Argentina` = "America", `Austria` = "Europe", `Belgium` = "Europe", `Brazil` = "America", `Canada` = "America", `Colombia` = "America", `Czechia` = "Europe", `Denmark` = "Europe", `Dominican Republic` = "America", `Finland` = "Europe", `France` = "Europe", `Germany` = "Europe", `Hungary` = "Europe", `India` = "Asia", `Ireland` = "Europe", `Italy` = "Europe", `Japan` = "Asia", `Mexico` = "America", `Netherlands` = "Europe", `Pakistan` = "Asia", `Peru` = "America", `Philippines` = "Asia", `Poland` = "Europe", `Portugal` = "Europe", `Romania` = "Europe", `South Korea` = "Asia", `Spain` = "Europe", `Sweden` = "Europe", `Switzerland` = "Europe", `Turkey` = "Europe", `United Kingdom` = "Europe", `US` = "America")
+
+
+p0 <- ggplot(data=dat, aes(x=id, y=CFR, group=Country, fill = Country, color = Country1)) +
+    geom_line(size = 1) +
+    geom_point(size = 2) + 
+    xlab("Day of increase from 10 confirmed cases") + 
+    ylab("Total active cases") + 
+    scale_x_continuous(breaks=-145:390*50) + geom_vline(xintercept=0, linetype = 'dashed', color = 'red', size = 3) +
+    theme_bw(base_size = 58)
+p0
+
